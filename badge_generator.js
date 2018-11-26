@@ -14,19 +14,21 @@ module.exports = class BadgeGenerator {
     this.win.webContents.executeJavaScript(`window.drawBadge = function ${this.drawBadge}`);
   }
 
-  generate(number) {
+  generate(value) {
     const opts = JSON.stringify(this.style);
-    return this.win.webContents.executeJavaScript(`window.drawBadge(${number}, ${opts});`);
+    if (typeof value === "number" || !value)
+      return this.win.webContents.executeJavaScript(`window.drawBadge(${value}, ${opts});`);
+    return this.win.webContents.executeJavaScript(`window.drawBadge("${value.toString()}", ${opts});`);
   }
 
-  drawBadge(number, style) {
+  drawBadge(value, style) {
     var radius = style.radius;
     var img = document.createElement('canvas');
     img.width = Math.ceil(radius * 2);
     img.height = Math.ceil(radius * 2);
     img.ctx = img.getContext('2d');
     img.radius = radius;
-    img.number = number;
+    img.value = value;
     img.displayStyle = style;
 
     style.color = style.color ? style.color : 'red';
@@ -36,7 +38,7 @@ module.exports = class BadgeGenerator {
     style.decimals = style.decimals === undefined || isNaN(style.decimals) ? 0 : style.decimals;
 
     img.draw = function() {
-      var fontScale, fontWidth, fontSize, number;
+      var fontScale, fontWidth, fontSize;
       this.width = Math.ceil(this.radius * 2);
       this.height = Math.ceil(this.radius * 2);
       this.ctx.clearRect(0,0,this.width,this.height);
@@ -48,25 +50,30 @@ module.exports = class BadgeGenerator {
       this.ctx.textAlign = "center";
       this.ctx.textBaseline = "middle";
       this.ctx.fillStyle = this.displayStyle.fontColor;
-      number = this.number.toFixed(this.displayStyle.decimals);
+
+      var value = this.value;
+      if (typeof value === 'number') {
+        value = value.toFixed(this.displayStyle.decimals);
+      }
+      
       fontSize = Number(/[0-9\.]+/.exec(this.ctx.font)[0]);
 
       if (!this.displayStyle.fit || isNaN(fontSize)) {
-        this.ctx.fillText(number,radius,radius);
+        this.ctx.fillText(value,radius,radius);
       } else {
-        fontWidth = this.ctx.measureText(number).width;
+        fontWidth = this.ctx.measureText(value).width;
         fontScale = Math.cos(Math.atan(fontSize/fontWidth)) * this.radius * 2 / fontWidth;
         this.ctx.setTransform(fontScale,0,0,fontScale,this.radius,this.radius);
-        this.ctx.fillText(number,0,0);
+        this.ctx.fillText(value,0,0);
         this.ctx.setTransform(1,0,0,1,0,0);
       }
 
       if (!this.displayStyle.fit || isNaN(fontSize)) {
-         this.ctx.fillText(number,radius,radius);
+         this.ctx.fillText(value,radius,radius);
       } else {
          fontScale = Math.cos(Math.atan(fontSize/fontWidth)) * this.radius * 2 / fontWidth;
          this.ctx.setTransform(fontScale,0,0,fontScale,this.radius,this.radius);
-         this.ctx.fillText(number,0,0);
+         this.ctx.fillText(value,0,0);
          this.ctx.setTransform(1,0,0,1,0,0);
       }
       return this;
